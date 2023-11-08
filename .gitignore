@@ -143,3 +143,6 @@ runs2
 /runs/*
 !/runs/rigid_redocking
 !/runs/flexible_self_docking
+
+# Mac temp
+.DS_Store
