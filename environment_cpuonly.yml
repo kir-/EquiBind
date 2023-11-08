@@ -10,11 +10,9 @@ dependencies:
   - torchvision
   - cpuonly
   - torchaudio
-  - dgl
   - rdkit
   - openbabel
   - biopython
-  - rdkit
   - biopandas
   - pot
   - dgllife
@@ -23,6 +21,8 @@ dependencies:
   - icecream
   - matplotlib
   - tensorboard
+  - pip:
+    - dgl
 
 
 
