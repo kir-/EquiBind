@@ -14,6 +14,7 @@ from rdkit import Chem
 from rdkit.Chem import MolFromPDBFile
 from rdkit.Chem.rdmolops import GetAdjacencyMatrix
 from torch.utils.data import Dataset
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -33,6 +34,8 @@ class PDBBind(Dataset):
                  complex_names_path='data/',
                  bsp_proteins=False,
                  bsp_ligands=False,
+                 crossdocked_proteins=False,
+                 crossdocked_ligands=False,
                  pocket_cutoff=8.0,
                  use_rec_atoms=False,
                  n_jobs=None,
@@ -70,6 +73,7 @@ class PDBBind(Dataset):
         # subset name is either 'pdbbind_filtered' or 'casf_test'
         self.chain_radius = chain_radius
         self.pdbbind_dir = 'data/PDBBind'
+        self.crossdocked_dir = 'data/crossdocked'
         self.bsp_dir = 'data/deepBSP'
         self.only_polar_hydrogens = only_polar_hydrogens
         self.complex_names_path = complex_names_path
@@ -91,6 +95,8 @@ class PDBBind(Dataset):
         self.use_rdkit_coords = use_rdkit_coords
         self.bsp_proteins = bsp_proteins
         self.bsp_ligands = bsp_ligands
+        self.crossdocked_proteins = crossdocked_proteins
+        self.crossdocked_ligands = crossdocked_ligands
         self.remove_h = remove_h
         self.is_train_data = is_train_data
         self.subgraph_augmentation = subgraph_augmentation
@@ -205,44 +211,73 @@ class PDBBind(Dataset):
         else:
             return lig_graph.to(self.device), rec_graph.to(self.device), lig_coords, rec_graph.ndata['x'], new_pocket_coords, pocket_coords, geometry_graph, self.complex_names[idx], idx
 
+    def extract_complex_name(self, prot_path):
+        parts = prot_path.split('/')
+        file_name_parts = parts[1].split('_')
+        complex_name = '_'.join(file_name_parts[:4])
+        return complex_name
+
     def process(self):
         log(f'Processing complexes from [{self.complex_names_path}] and saving it to [{self.processed_dir}]')
-
-        complex_names = read_strings_from_txt(self.complex_names_path)
-        if self.dataset_size != None:
-            complex_names = complex_names[:self.dataset_size]
-        if (self.remove_h or self.only_polar_hydrogens) and '4acu' in complex_names:
-            complex_names.remove('4acu')  # in this complex's ligand the hydrogens cannot be removed
-        log(f'Loading {len(complex_names)} complexes.')
-        ligs = []
-        to_remove = []
-        for name in tqdm(complex_names, desc='loading ligands'):
-            if self.bsp_ligands:
-                lig = read_molecule(os.path.join(self.bsp_dir, name, f'Lig_native.pdb'), sanitize=True, remove_hs=self.remove_h)
+        # TODO Modify to load pt file and then parse it
+        if (self.crossdocked_proteins):
+            data_splits = torch.load("split_by_name.pt")
+            data_split = data_splits[os.path.basename(self.complex_names_path)]
+            ligs = []
+            to_remove = []
+            rec_paths = []
+            complex_names = []
+            for prot_path, lig_path in tqdm(data_split, desc='loading ligands'):
+                lig = read_molecule(os.path.join(self.crossdocked_dir, lig_path), sanitize=True, remove_hs=self.remove_h)
                 if lig == None:
-                    to_remove.append(name)
                     continue
-            else:
-                lig = read_molecule(os.path.join(self.pdbbind_dir, name, f'{name}_ligand.sdf'), sanitize=True,
-                                    remove_hs=self.remove_h)
-                if lig == None:  # read mol2 file if sdf file cannot be sanitized
-                    lig = read_molecule(os.path.join(self.pdbbind_dir, name, f'{name}_ligand.mol2'), sanitize=True,
-                                        remove_hs=self.remove_h)
-            if self.only_polar_hydrogens:
-                for atom in lig.GetAtoms():
-                    if atom.GetAtomicNum() == 1 and [x.GetAtomicNum() for x in atom.GetNeighbors()] == [6]:
-                        atom.SetAtomicNum(0)
-                lig = Chem.DeleteSubstructs(lig, Chem.MolFromSmarts('[#0]'))
-                Chem.SanitizeMol(lig)
-            ligs.append(lig)
-        for name in to_remove:
-            complex_names.remove(name)
-
-        if self.bsp_proteins:
-            rec_paths = [os.path.join(self.bsp_dir, name, f'Rec.pdb') for name in complex_names]
+                if self.only_polar_hydrogens:
+                    for atom in lig.GetAtoms():
+                        if atom.GetAtomicNum() == 1 and [x.GetAtomicNum() for x in atom.GetNeighbors()] == [6]:
+                            atom.SetAtomicNum(0)
+                    lig = Chem.DeleteSubstructs(lig, Chem.MolFromSmarts('[#0]'))
+                    Chem.SanitizeMol(lig)
+                complex_names.append(self.extract_complex_name(prot_path))
+                ligs.append(lig)
+                rec_paths.append(os.path.join(self.crossdocked_dir, prot_path))
         else:
-            rec_paths = [os.path.join(self.pdbbind_dir, name, f'{name}_protein_processed.pdb') for name in
-                         complex_names]
+            complex_names = read_strings_from_txt(self.complex_names_path)
+            if self.dataset_size != None:
+                complex_names = complex_names[:self.dataset_size]
+            if (self.remove_h or self.only_polar_hydrogens) and '4acu' in complex_names:
+                complex_names.remove('4acu')  # in this complex's ligand the hydrogens cannot be removed
+            log(f'Loading {len(complex_names)} complexes.')
+            ligs = []
+            to_remove = []
+            for name in tqdm(complex_names, desc='loading ligands'):
+                if self.bsp_ligands:
+                    lig = read_molecule(os.path.join(self.bsp_dir, name, f'Lig_native.pdb'), sanitize=True, remove_hs=self.remove_h)
+                    if lig == None:
+                        to_remove.append(name)
+                        continue
+                else:
+                    lig = read_molecule(os.path.join(self.pdbbind_dir, name, f'{name}_ligand.sdf'), sanitize=True,
+                                        remove_hs=self.remove_h)
+                    if lig == None:  # read mol2 file if sdf file cannot be sanitized
+                        lig = read_molecule(os.path.join(self.pdbbind_dir, name, f'{name}_ligand.mol2'), sanitize=True,
+                                            remove_hs=self.remove_h)
+                if self.only_polar_hydrogens:
+                    for atom in lig.GetAtoms():
+                        if atom.GetAtomicNum() == 1 and [x.GetAtomicNum() for x in atom.GetNeighbors()] == [6]:
+                            atom.SetAtomicNum(0)
+                    lig = Chem.DeleteSubstructs(lig, Chem.MolFromSmarts('[#0]'))
+                    Chem.SanitizeMol(lig)
+                ligs.append(lig)
+            for name in to_remove:
+                complex_names.remove(name)
+
+            if self.bsp_proteins:
+                rec_paths = [os.path.join(self.bsp_dir, name, f'Rec.pdb') for name in complex_names]
+            elif self.crossdocked_proteins:
+                rec_paths = [os.path.join(self.crossdocked_dir, name) for name in complex_names]
+            else:
+                rec_paths = [os.path.join(self.pdbbind_dir, name, f'{name}_protein_processed.pdb') for name in
+                            complex_names]
 
         if not os.path.exists(self.processed_dir):
             os.mkdir(self.processed_dir)

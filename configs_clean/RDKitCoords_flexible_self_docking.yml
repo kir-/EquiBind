@@ -1,4 +1,4 @@
-experiment_name: 'YourExperimentName'
+experiment_name: 'CrossDocked2020'
 seed: 1
 data_seed: 1
 
@@ -22,14 +22,18 @@ loss_params:
   kabsch_rmsd_weight: 1
 
 
-train_names: 'data/timesplit_no_lig_overlap_train'
-val_names: 'data/timesplit_no_lig_overlap_val'
+# train_names: 'data/timesplit_no_lig_overlap_train'
+# val_names: 'data/timesplit_no_lig_overlap_val'
+train_names: 'data/train'
+val_names: 'data/test'
 test_names: 'data/timesplit_test'
 num_workers: 0
 dataset_params:
   geometry_regularization_ring: True
   use_rdkit_coords: True #
   bsp_proteins: False # if this is true then the proteins from deepbsp are used, otherwise those from PDBBind. Note that not all proteins are in deepBSP and this only works with e.g. pdbbind_names_without_casf_rec_and_in_bsp as complex_names_path
+  crossdocked_proteins: True
+  crossdocked_ligands: True
   dataset_size: # mostly for debugging dataset creation. leave empty to use the whole dataset
   translation_distance: 5.0
   n_jobs: 20 # leave empty to use num_cpu - 1
