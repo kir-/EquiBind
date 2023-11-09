@@ -31,7 +31,7 @@ def process_data(data_entries, data_root):
 data = torch.load("split_by_name.pt")
 
 # Directory with the data
-data_root = 'data/crossdocked_pocket10'
+data_root = 'data/crossdocked'
 
 # Process the training data
 process_data(data['train'], data_root)
