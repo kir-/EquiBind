@@ -12,7 +12,7 @@ import pandas as pd
 
 from commons.utils import write_strings_to_txt
 
-
+# TODO add crossdocked dataset
 pdb_path = 'data/PDBBind'
 casf_names = os.listdir('data/deepBSP/casf_test')
 bsp_names = os.listdir('data/deepBSP/pdbbind_filtered')
