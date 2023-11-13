@@ -25,30 +25,14 @@ or [social media](https://hannes-stark.com/) or Octavian Ganea via [oct@mit.edu]
 Our preprocessed data (see dataset section in the paper Appendix) is available from [zenodo](https://zenodo.org/record/6408497). \
 The files in `data` contain the names for the time-based data split.
 
-If you want to train one of our models with the data then: 
-1. download it from [zenodo](https://zenodo.org/record/6408497) 
-2. unzip the directory and place it into `data` such that you have the path `data/PDBBind`
-
+Training the model on CrossDocked202: 
+1. download it from [drive](https://drive.google.com/drive/folders/1CzwxmTpjbrt83z_wBzcQncq84OVDPurM) 
+2. unzip `crossdocked_pocket10.tar.gz` and place it into `data` such that you have the path `data/crossdocked`
+2. place the `split_by_name.pt` in the main directory
 
 # Use provided model weights to predict binding structure of your own protein-ligand pairs:
 
-## Step 1: What you need as input
-
-Ligand files of the formats ``.mol2`` or ``.sdf`` or ``.pdbqt`` or ``.pdb`` whose names contain the string `ligand` (your ligand files should contain **all** hydrogens). \
-Receptor files of the format ``.pdb`` whose names contain the string `protein`. We ran [reduce](https://github.com/rlabduke/reduce) on our training proteins. Maybe you also want to run it on your protein.\
-For each complex you want to predict you need a directory containing the ligand and receptor file. Like this: 
-```
-my_data_folder
-└───name1
-    │   name1_protein.pdb
-    │   name1_ligand.sdf
-└───name2
-    │   name2_protein.pdb
-    │   name2_ligand.mol2
-...
-```
-
-## Step 2: Setup Environment
+## Step 1: Setup Environment
 
 We will set up the environment using [Anaconda](https://docs.anaconda.com/anaconda/install/index.html). Clone the
 current repo
@@ -89,16 +73,21 @@ matplotlib
 tensorboard
 ````
 
-## Step 3: Predict Binding Structures!
+## Step 2: Add Hydrogen to Crossdocked dataset
 
-In the config file `configs_clean/inference.yml` set the path to your input data folder `inference_path: path_to/my_data_folder`.  
-Then run:
+1. Update data path in `add_hyrogen.py`
+2. `python3 add_hydrogen.py`
 
-    python inference.py --config=configs_clean/inference.yml
+## Step 3: Train on Crossdocked!
 
-Done! :tada: \
-Your results are saved as `.sdf` files in the directory specified
-in the config file under ``output_directory: 'data/results/output'`` and as tensors at ``runs/flexible_self_docking/predictions_RDKitFalse.pt``!
+To train the model yourself, run:
+
+    python train.py --config=configs_clean/RDKitCoords_flexible_self_docking.yml
+
+The model weights are saved in the `runs` directory.\
+You can also start a tensorboard server ``tensorboard --logdir=runs`` and watch the model train. \
+To evaluate the model on the test set, change the ``run_dirs:`` entry of the config file `inference_file_for_reproduce.yml` to point to the directory produced in `runs`.
+Then you can run``python inference.py --config=configs_clean/inference_file_for_reproduce.yml`` as above!
 
 # Inference for multiple ligands in the same .sdf file and a single receptor
 
