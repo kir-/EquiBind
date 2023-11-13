@@ -219,7 +219,6 @@ class PDBBind(Dataset):
 
     def process(self):
         log(f'Processing complexes from [{self.complex_names_path}] and saving it to [{self.processed_dir}]')
-        # TODO Modify to load pt file and then parse it
         if (self.crossdocked_proteins):
             data_splits = torch.load("split_by_name.pt")
             data_split = data_splits[os.path.basename(self.complex_names_path)]

@@ -346,7 +346,6 @@ def get_receptor(rec_path, lig, cutoff):
         else:
             invalid_chain_ids.append(chain.get_id())
     coords = [item for sublist in valid_coords for item in sublist]  # list with n_residues arrays: [n_atoms, 3]
-    # TODO Fix Bug in processing of valid_c_alpha_coords
     c_alpha_coords = np.concatenate(valid_c_alpha_coords, axis=0)  # [n_residues, 3]
     n_coords = np.concatenate(valid_n_coords, axis=0)  # [n_residues, 3]
     c_coords = np.concatenate(valid_c_coords, axis=0)  # [n_residues, 3]
