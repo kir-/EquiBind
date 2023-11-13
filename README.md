@@ -76,7 +76,7 @@ tensorboard
 ## Step 2: Add Hydrogen to Crossdocked dataset
 
 1. Update data path in `add_hyrogen.py`
-2. `python3 add_hydrogen.py`
+2. Run `python3 add_hydrogen.py` to update dataset
 
 ## Step 3: Train on Crossdocked!
 
