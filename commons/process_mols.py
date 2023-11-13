@@ -256,6 +256,15 @@ def safe_index(l, e):
         return l.index(e)
     except:
         return len(l) - 1
+    
+def safe_get_receptor(rec_path, lig, cutoff):
+    try:
+        return get_receptor(rec_path, lig, cutoff)
+    except Exception as e:
+        # Log the error or handle it as necessary
+        log(f"Error processing receptor: {rec_path}")
+        # Return a default value or None, depending on how you want to handle failures
+        return None, None, None, None, None
 
 def get_receptor(rec_path, lig, cutoff):
     conf = lig.GetConformer()

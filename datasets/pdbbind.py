@@ -21,7 +21,7 @@ from tqdm import tqdm
 import torch.nn.functional as F
 
 from commons.geometry_utils import random_rotation_translation, rigid_transform_Kabsch_3D_torch
-from commons.process_mols import get_rdkit_coords, get_receptor, get_pocket_coords, \
+from commons.process_mols import get_rdkit_coords, safe_get_receptor, get_receptor, get_pocket_coords, \
     read_molecule, get_rec_graph, get_lig_graph_revised, get_receptor_atom_subgraph, get_lig_structure_graph, \
     get_geometry_graph, get_lig_graph_multiple_conformer, get_geometry_graph_ring
 from commons.utils import pmap_multi, read_strings_from_txt, log
@@ -223,6 +223,8 @@ class PDBBind(Dataset):
         if (self.crossdocked_proteins):
             data_splits = torch.load("split_by_name.pt")
             data_split = data_splits[os.path.basename(self.complex_names_path)]
+            if self.dataset_size != None:
+                data_split = data_split[:self.dataset_size]
             ligs = []
             to_remove = []
             rec_paths = []
@@ -284,7 +286,7 @@ class PDBBind(Dataset):
 
         if not os.path.exists(os.path.join(self.processed_dir, 'rec_graphs.pt')) or not os.path.exists(os.path.join(self.processed_dir, 'pocket_and_rec_coords.pt')) or (not os.path.exists(os.path.join(self.processed_dir, self.rec_subgraph_path)) and self.rec_subgraph):
             log('Get receptors, filter chains, and get its coordinates')
-            receptor_representatives = pmap_multi(get_receptor, zip(rec_paths, ligs), n_jobs=self.n_jobs, cutoff=self.chain_radius, desc='Get receptors')
+            receptor_representatives = pmap_multi(safe_get_receptor, zip(rec_paths, ligs), n_jobs=self.n_jobs, cutoff=self.chain_radius, desc='Get receptors')
             recs, recs_coords, c_alpha_coords, n_coords, c_coords = map(list, zip(*receptor_representatives))
             # rec coords is a list with n_residues many arrays of shape: [n_atoms_in_residue, 3]
 
